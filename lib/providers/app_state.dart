@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/bar.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class AppState extends ChangeNotifier {
   int _currentBarIndex = 0;
@@ -17,6 +19,22 @@ class AppState extends ChangeNotifier {
 
   Timer? _timer;
 
+  final AuthService _authService = AuthService();
+  User? _user;
+  bool _hasSubscription = false;
+
+  AppState() {
+    _authService.authStateChanges.listen((user) async {
+      _user = user;
+      if (user != null) {
+        _hasSubscription = await _authService.getSubscriptionStatus(user.uid);
+      } else {
+        _hasSubscription = false;
+      }
+      notifyListeners();
+    });
+  }
+
   // Getters
   int get currentBarIndex => _currentBarIndex;
   bool get isInProgress => _isInProgress;
@@ -27,6 +45,9 @@ class AppState extends ChangeNotifier {
   Bar? get currentBar => _currentBarIndex < _barRoute.length ? _barRoute[_currentBarIndex] : null;
   bool get isRouteCompleted => _currentBarIndex >= _barRoute.length;
   bool get isTestingMode => testingMode;
+  User? get user => _user;
+  bool get isSignedIn => _user != null;
+  bool get hasSubscription => _hasSubscription;
 
   // Methods
   void setBarRoute(List<Bar> bars) {
@@ -80,6 +101,21 @@ class AppState extends ChangeNotifier {
     _isTimerActive = false;
     _remainingSeconds = 0;
     _timer?.cancel();
+    notifyListeners();
+  }
+
+  Future<void> signInWithGoogle() async {
+    final user = await _authService.signInWithGoogle();
+    if (user != null) {
+      _hasSubscription = await _authService.getSubscriptionStatus(user.uid);
+      notifyListeners();
+    }
+  }
+
+  Future<void> signOut() async {
+    await _authService.signOut();
+    _user = null;
+    _hasSubscription = false;
     notifyListeners();
   }
 }

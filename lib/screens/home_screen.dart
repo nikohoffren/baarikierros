@@ -4,6 +4,8 @@ import 'package:baarikierros/models/round.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -44,6 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
+                _buildAuthBar(appState),
+                const SizedBox(height: 16),
                 _buildHeader(),
                 const SizedBox(height: 32),
                 _buildCityDropdown(),
@@ -54,6 +59,61 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAuthBar(AppState appState) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (appState.isSignedIn)
+          Row(
+            children: [
+              if (appState.user?.photoURL != null)
+                CircleAvatar(
+                  backgroundImage: NetworkImage(appState.user!.photoURL!),
+                  radius: 18,
+                ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appState.user?.displayName ?? '',
+                    style: const TextStyle(color: AppTheme.accentGold, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    appState.hasSubscription ? 'Tilaus: Aktiivinen' : 'Tilaus: Ei aktiivinen',
+                    style: TextStyle(
+                      color: appState.hasSubscription ? Colors.greenAccent : AppTheme.lightGrey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          )
+        else
+          const Text(
+            'Et ole kirjautunut sisään',
+            style: TextStyle(color: AppTheme.lightGrey),
+          ),
+        const SizedBox(width: 10),
+        ElevatedButton(
+          onPressed: appState.isSignedIn
+              ? appState.signOut
+              : appState.signInWithGoogle,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.accentGold,
+            foregroundColor: AppTheme.primaryBlack,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+          child: Text(appState.isSignedIn ? 'Kirjaudu ulos' : 'Kirjaudu Googlella'),
+        ),
+      ],
     );
   }
 

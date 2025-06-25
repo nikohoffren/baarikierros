@@ -205,7 +205,7 @@ class _RouteScreenState extends State<RouteScreen> {
         Flushbar(
           messageText: const Center(
             child: Text(
-              'Ajastin käynnistyy...',
+              'Ajastin käynnissä',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
               textAlign: TextAlign.center,
             ),
@@ -279,23 +279,57 @@ class _RouteScreenState extends State<RouteScreen> {
           // Overlays and timer use Consumer/Selector
           Consumer<AppState>(
             builder: (context, appState, child) {
-              // Show congratulation snackbar when timer ends
-              if (!appState.isInProgress && appState.remainingSeconds == 0 && appState.currentBarIndex > 0) {
+              // Show congratulation snackbar when timer ends, but not after the last bar
+              if (!appState.isInProgress && appState.remainingSeconds == 0 && appState.currentBarIndex > 0 && !appState.isRouteCompleted) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   Flushbar(
-                    messageText: const Center(
-                      child: Text(
-                        'Aika lopussa! Onnittelut, voit siirtyä kohti seuraavaa baaria.',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                        textAlign: TextAlign.center,
-                      ),
+                    messageText: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.celebration, color: Colors.white, size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Black stroke
+                              Text(
+                                'Onnittelut, voit siirtyä kohti seuraavaa baaria!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  foreground: Paint()
+                                    ..style = PaintingStyle.stroke
+                                    ..strokeWidth = 3
+                                    ..color = Colors.black,
+                                ),
+                              ),
+                              // White fill
+                              const Text(
+                                'Onnittelut, voit siirtyä kohti seuraavaa baaria!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    backgroundColor: AppTheme.secondaryBlack,
+                    backgroundGradient: const LinearGradient(
+                      colors: [Color(0xFFFFD700), Color(0xFFFFA500)], // Gold to orange
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(16),
-                    margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    margin: const EdgeInsets.fromLTRB(32, 32, 32, 0), // Top margin
                     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                     duration: const Duration(seconds: 5),
-                    flushbarPosition: FlushbarPosition.BOTTOM,
+                    flushbarPosition: FlushbarPosition.TOP,
                     animationDuration: const Duration(milliseconds: 700),
                     forwardAnimationCurve: Curves.elasticOut,
                     reverseAnimationCurve: Curves.easeIn,
@@ -337,7 +371,7 @@ class _RouteScreenState extends State<RouteScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Baari ${appState.currentBarIndex + 1}/${appState.barRoute.length}',
+                                  'Baari ${appState.currentBarIndex + 1}/${appState.barRoute.length}',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -502,7 +536,7 @@ class _RouteScreenState extends State<RouteScreen> {
                   width: double.infinity,
                   height: 60,
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.go('/'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.accentGold,
                       side: const BorderSide(color: AppTheme.accentGold),

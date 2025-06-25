@@ -52,6 +52,12 @@ dependencies:
   # Custom animated snackbars
   another_flushbar: ^1.12.30
 
+  # Firebase dependencies
+  firebase_core: ^2.30.0
+  firebase_auth: ^4.17.8
+  google_sign_in: ^6.2.1
+  cloud_firestore: ^4.15.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
