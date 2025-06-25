@@ -10,6 +10,8 @@ import '../widgets/bar_info_overlay.dart';
 import '../widgets/timer_widget.dart';
 import '../theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import '../models/round.dart';
+import 'package:another_flushbar/flushbar.dart';
 
 class RouteScreen extends StatefulWidget {
   const RouteScreen({super.key});
@@ -23,12 +25,27 @@ class _RouteScreenState extends State<RouteScreen> {
   StreamSubscription<Position>? _positionSubscription;
   Set<Marker> _markers = {};
   int _lastBarIndex = -1;
+  bool _didSetBarRoute = false;
 
   @override
   void initState() {
     super.initState();
     _initializeLocationTracking();
     _updateMarkers();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didSetBarRoute) {
+      final round = GoRouter.of(context).routerDelegate.currentConfiguration?.extra;
+      if (round is Round) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.read<AppState>().setBarRoute(round.bars);
+        });
+      }
+      _didSetBarRoute = true;
+    }
   }
 
   @override
@@ -176,7 +193,7 @@ class _RouteScreenState extends State<RouteScreen> {
       return;
     }
     try {
-      bool isNearby = LocationService.checkProximity(
+      bool isNearby = appState.isTestingMode || LocationService.checkProximity(
         currentPosition.latitude,
         currentPosition.longitude,
         currentBar.lat,
@@ -184,8 +201,25 @@ class _RouteScreenState extends State<RouteScreen> {
         threshold: 50,
       );
       if (isNearby) {
-        appState.startBarVisit();
-        _showSuccessDialog('✅ Olet baarissa!', 'Ajastin käynnistyy...');
+        appState.startBarVisit(durationSeconds: 60); // 60 seconds for testing
+        Flushbar(
+          messageText: const Center(
+            child: Text(
+              'Ajastin käynnistyy...',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          backgroundColor: AppTheme.secondaryBlack,
+          borderRadius: BorderRadius.circular(16),
+          margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          duration: const Duration(seconds: 5),
+          flushbarPosition: FlushbarPosition.BOTTOM,
+          animationDuration: const Duration(milliseconds: 700),
+          forwardAnimationCurve: Curves.elasticOut,
+          reverseAnimationCurve: Curves.easeIn,
+        ).show(context);
         _updateMarkers();
       } else {
         _showErrorDialog('📍 Et ole tarpeeksi lähellä baaria');
@@ -223,9 +257,9 @@ class _RouteScreenState extends State<RouteScreen> {
             compassEnabled: true,
             onTap: (_) => FocusScope.of(context).unfocus(),
           ),
-          // Center on me button
+          // Center on me button (moved below top bar)
           Positioned(
-            bottom: 100,
+            top: MediaQuery.of(context).padding.top + 80,
             right: 16,
             child: FloatingActionButton(
               backgroundColor: AppTheme.accentGold,
@@ -245,6 +279,29 @@ class _RouteScreenState extends State<RouteScreen> {
           // Overlays and timer use Consumer/Selector
           Consumer<AppState>(
             builder: (context, appState, child) {
+              // Show congratulation snackbar when timer ends
+              if (!appState.isInProgress && appState.remainingSeconds == 0 && appState.currentBarIndex > 0) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  Flushbar(
+                    messageText: const Center(
+                      child: Text(
+                        'Aika lopussa! Onnittelut, voit siirtyä kohti seuraavaa baaria.',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    backgroundColor: AppTheme.secondaryBlack,
+                    borderRadius: BorderRadius.circular(16),
+                    margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                    duration: const Duration(seconds: 5),
+                    flushbarPosition: FlushbarPosition.BOTTOM,
+                    animationDuration: const Duration(milliseconds: 700),
+                    forwardAnimationCurve: Curves.elasticOut,
+                    reverseAnimationCurve: Curves.easeIn,
+                  ).show(context);
+                });
+              }
               if (appState.isRouteCompleted) {
                 return _buildCompletionScreen();
               }
