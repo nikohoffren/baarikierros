@@ -2,7 +2,7 @@
 <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="120" height="120" rx="24" fill="#7C3AED"/>
   <g>
-    <path d="M30 30 H90 L75 55 Q70 65 60 65 Q50 65 45 55 Z" fill="#FFD700" stroke="#111111" stroke-width="4"/>
+    <path d="M30 30 Q 45 25, 60 30 T 90 30 L75 55 Q70 65 60 65 Q50 65 45 55 Z" fill="#FFD700" stroke="#111111" stroke-width="4"/>
     <rect x="56" y="65" width="8" height="28" rx="4" fill="#111111"/>
     <ellipse cx="60" cy="95" rx="16" ry="6" fill="#111111" fill-opacity="0.15"/>
   </g>
