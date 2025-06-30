@@ -197,7 +197,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Aika jäljellä',
+                  'Aikaa jäljellä',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

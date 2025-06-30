@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../models/city.dart';
 import '../models/round.dart';
 import '../models/bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _buildAuthBar(appState),
                 const SizedBox(height: 16),
-                _buildHeader(),
+                _buildHeader(context),
                 const SizedBox(height: 32),
                 _buildCityDropdown(appState),
                 const SizedBox(height: 24),
@@ -83,9 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         const SizedBox(width: 10),
         ElevatedButton(
-          onPressed: appState.isSignedIn
-              ? appState.signOut
-              : appState.signInWithGoogle,
+          onPressed: () => _handleSignIn(context),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.accentGold,
             foregroundColor: AppTheme.primaryBlack,
@@ -100,48 +99,162 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            gradient: AppTheme.goldGradient,
-            borderRadius: BorderRadius.circular(60),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.accentGold.withOpacity(0.3),
-                blurRadius: 30,
-                spreadRadius: 10,
-              ),
-            ],
+  Future<void> _handleSignIn(BuildContext context) async {
+    final appState = context.read<AppState>();
+    if (appState.isSignedIn) {
+      await appState.signOut();
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final ageConfirmed = prefs.getBool('ageConfirmed') ?? false;
+
+    if (ageConfirmed) {
+      await appState.signInWithGoogle();
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.secondaryBlack,
+        title: const Text('Vahvista ikäsi', style: TextStyle(color: AppTheme.accentGold)),
+        content: const Text('Vahvistamalla hyväksyt, että olet vähintään 18-vuotias.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Peruuta'),
           ),
-          child: Center(
-            child: SvgPicture.asset(
-              'assets/logo.svg',
-              width: 90,
-              height: 90,
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Kyllä, olen 18+'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await prefs.setBool('ageConfirmed', true);
+      await appState.signInWithGoogle();
+    }
+  }
+
+  Future<void> _showInfoDialog(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.secondaryBlack,
+          title: const Text('Tietoa sovelluksesta', style: TextStyle(color: AppTheme.accentGold)),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: const <Widget>[
+                Text(
+                  'Sovelluksen kuvaus',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accentGold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Baarikierros on moderni sovellus, jonka avulla voit löytää ja kiertää kaupungin parhaita baareja valmiiden reittien avulla. Valitse kaupunki, valitse kierros ja seuraa reittiä helposti kartalta. Sovellus seuraa etenemistäsi ja auttaa sinua löytämään seuraavan pysähdyksen.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.white,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Tärkeää: turvallisuus ja vastuullisuus',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accentGold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Ole aina varovainen liikenteessä ja noudata liikennesääntöjä siirtyessäsi baarista toiseen. Jos nautit alkoholia, älä koskaan aja – suosi kävelyä. Baarikierros-reitit on suunniteltu niin, että baarit ovat kävelyetäisyydellä toisistaan.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppTheme.lightGrey,
+                  ),
+                ),
+              ],
             ),
           ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Sulje', style: TextStyle(color: AppTheme.accentGold)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: AppTheme.goldGradient,
+                borderRadius: BorderRadius.circular(60),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.accentGold.withOpacity(0.3),
+                    blurRadius: 30,
+                    spreadRadius: 10,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/logo.svg',
+                  width: 90,
+                  height: 90,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'Baarikierros',
+              style: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.accentGold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Valitse kaupunki ja aloita kierros',
+              style: TextStyle(
+                fontSize: 18,
+                color: AppTheme.lightGrey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
-        const SizedBox(height: 32),
-        const Text(
-          'Baarikierros',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.accentGold,
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IconButton(
+            icon: const Icon(Icons.info_outline, color: AppTheme.accentGold, size: 28),
+            onPressed: () => _showInfoDialog(context),
+            tooltip: 'Tietoa sovelluksesta',
           ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Valitse kaupunki ja aloita kierros',
-          style: TextStyle(
-            fontSize: 18,
-            color: AppTheme.lightGrey,
-          ),
-          textAlign: TextAlign.center,
         ),
       ],
     );

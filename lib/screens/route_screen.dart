@@ -379,11 +379,18 @@ class _RouteScreenState extends State<RouteScreen> {
                                     color: AppTheme.white,
                                   ),
                                 ),
-                                LinearProgressIndicator(
-                                  value: (appState.currentBarIndex + 1) / appState.barRoute.length,
-                                  backgroundColor: AppTheme.grey.withOpacity(0.3),
-                                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentGold),
-                                ),
+                                if (appState.barRoute.isNotEmpty)
+                                  LinearProgressIndicator(
+                                    value: (appState.currentBarIndex + 1) / appState.barRoute.length,
+                                    backgroundColor: AppTheme.grey.withOpacity(0.3),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentGold),
+                                  )
+                                else
+                                  LinearProgressIndicator(
+                                    value: 0.0,
+                                    backgroundColor: AppTheme.grey.withOpacity(0.3),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentGold),
+                                  ),
                               ],
                             ),
                           ),

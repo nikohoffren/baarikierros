@@ -7,9 +7,12 @@ import 'screens/home_screen.dart';
 import 'screens/route_screen.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const BaarikierrosApp());
 }
 
@@ -30,24 +33,17 @@ class _BaarikierrosAppState extends State<BaarikierrosApp> {
   }
 
   Future<void> _initialize() async {
-    await Future.wait([
-      Firebase.initializeApp(),
-      Future.delayed(const Duration(seconds: 5)),
-    ]);
-    setState(() {
-      _initialized = true;
-    });
+    // Artificial delay for splash screen
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted) {
+      setState(() {
+        _initialized = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) {
-      return MaterialApp(
-        home: SplashScreen(),
-        theme: AppTheme.darkTheme,
-        debugShowCheckedModeBanner: false,
-      );
-    }
     return ChangeNotifierProvider(
       create: (context) => AppState(),
       child: MaterialApp.router(
@@ -55,6 +51,9 @@ class _BaarikierrosAppState extends State<BaarikierrosApp> {
         theme: AppTheme.darkTheme,
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
+        builder: (context, router) {
+          return _initialized ? router! : const SplashScreen();
+        },
       ),
     );
   }
