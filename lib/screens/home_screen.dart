@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -134,10 +135,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.local_bar,
-            size: 60,
-            color: AppTheme.primaryBlack,
+          child: Center(
+            child: SvgPicture.asset(
+              'assets/logo.svg',
+              width: 90,
+              height: 90,
+            ),
           ),
         ),
         const SizedBox(height: 32),
