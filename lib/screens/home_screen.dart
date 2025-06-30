@@ -10,6 +10,20 @@ import '../models/round.dart';
 import '../models/bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _TimeRange {
+  final int start; // minutes since midnight
+  final int end;
+  _TimeRange(this.start, this.end);
+  String format() {
+    return _formatMinutes(start) + '-' + _formatMinutes(end);
+  }
+  String _formatMinutes(int m) {
+    final h = (m ~/ 60).toString().padLeft(2, '0');
+    final min = (m % 60).toString().padLeft(2, '0');
+    return '$h:$min';
+  }
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -345,6 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: rounds.length,
         itemBuilder: (context, index) {
           final round = rounds[index];
+          final openingHoursText = _getRouteOpeningHours(round);
           return Card(
             margin: const EdgeInsets.only(bottom: 16),
             color: AppTheme.secondaryBlack.withOpacity(0.8),
@@ -404,7 +419,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time, color: AppTheme.accentGold, size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          openingHoursText,
+                          style: const TextStyle(
+                            color: AppTheme.accentGold,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         const Icon(
@@ -430,5 +460,81 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  String _getRouteOpeningHours(Round round) {
+    if (round.bars.isEmpty) return 'Auki: Ei tietoa';
+    final now = DateTime.now();
+    final weekday = _weekdayToKey(now.weekday);
+    List<_TimeRange> intersection = _barToTimeRanges(round.bars.first.openingHours[weekday] ?? []);
+    for (final bar in round.bars.skip(1)) {
+      final periods = _barToTimeRanges(bar.openingHours[weekday] ?? []);
+      intersection = _intersectTimeRanges(intersection, periods);
+      if (intersection.isEmpty) break;
+    }
+    if (intersection.isEmpty) return 'Auki: Ei yhteistä aukioloa tänään';
+    intersection.sort((a, b) => a.start.compareTo(b.start));
+    final formatted = intersection.map((r) => r.format()).join(', ');
+    return 'Auki: $formatted';
+  }
+
+  List<_TimeRange> _barToTimeRanges(List<OpenPeriod> periods) {
+    final List<_TimeRange> result = [];
+    for (final p in periods) {
+      final start = _parseMinutes(p.open);
+      final end = _parseMinutes(p.close);
+      if (end > start) {
+        result.add(_TimeRange(start, end));
+      } else if (end < start) {
+        // Overnight: split into two ranges
+        result.add(_TimeRange(start, 1440)); // until midnight
+        result.add(_TimeRange(0, end)); // from midnight
+      }
+      // If end == start, skip (zero-length period)
+    }
+    return result;
+  }
+
+  int _parseMinutes(String time) {
+    final parts = time.split(':');
+    int hour = int.parse(parts[0].padLeft(2, '0'));
+    int minute = int.parse(parts[1].padLeft(2, '0'));
+    return hour * 60 + minute;
+  }
+
+  List<_TimeRange> _intersectTimeRanges(List<_TimeRange> a, List<_TimeRange> b) {
+    List<_TimeRange> result = [];
+    for (final ra in a) {
+      for (final rb in b) {
+        final start = ra.start > rb.start ? ra.start : rb.start;
+        final end = ra.end < rb.end ? ra.end : rb.end;
+        if (start < end) {
+          result.add(_TimeRange(start, end));
+        }
+      }
+    }
+    return result;
+  }
+
+  String _weekdayToKey(int weekday) {
+    // 1=Mon, 7=Sun
+    switch (weekday) {
+      case DateTime.monday:
+        return 'monday';
+      case DateTime.tuesday:
+        return 'tuesday';
+      case DateTime.wednesday:
+        return 'wednesday';
+      case DateTime.thursday:
+        return 'thursday';
+      case DateTime.friday:
+        return 'friday';
+      case DateTime.saturday:
+        return 'saturday';
+      case DateTime.sunday:
+        return 'sunday';
+      default:
+        return 'monday';
+    }
   }
 }
