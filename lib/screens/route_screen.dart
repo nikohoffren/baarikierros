@@ -406,6 +406,9 @@ class _RouteScreenState extends State<RouteScreen> {
                         child: TimerWidget(
                           remainingSeconds: remainingSeconds,
                           isActive: isActive,
+                          currentBar: context.read<AppState>().currentBar!,
+                          currentBarIndex: context.read<AppState>().currentBarIndex,
+                          totalBars: context.read<AppState>().barRoute.length,
                         ),
                       );
                     },
