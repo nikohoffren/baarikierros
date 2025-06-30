@@ -1,61 +1,109 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/bar.dart';
+import '../models/city.dart';
+import '../models/round.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_service.dart';
 
 class AppState extends ChangeNotifier {
+  final FirebaseService _firebaseService = FirebaseService();
+  final AuthService _authService = AuthService();
+
+  // Auth state
+  User? _user;
+  bool _hasSubscription = false;
+  bool get isSignedIn => _user != null;
+  User? get user => _user;
+  bool get hasSubscription => _hasSubscription;
+
+  // Location state
+  Position? _currentPosition;
+  Position? get currentPosition => _currentPosition;
+
+  // Route state
+  List<Bar> _barRoute = [];
   int _currentBarIndex = 0;
   bool _isInProgress = false;
+  bool _isRouteCompleted = false;
   int _remainingSeconds = 0;
-  Position? _currentPosition;
   bool _isTimerActive = false;
+  bool _isTestingMode = true; //! Set false for production
 
-  //! Testing mode: disables proximity check, set false for production
-  bool testingMode = true;
-
-  List<Bar> _barRoute = [];
+  // Cities and rounds state
+  List<City> _cities = [];
+  Map<String, List<Round>> _roundsByCity = {};
+  City? _selectedCity;
+  bool _isLoadingRounds = false;
 
   Timer? _timer;
 
-  final AuthService _authService = AuthService();
-  User? _user;
-  bool _hasSubscription = false;
-
-  AppState() {
-    _authService.authStateChanges.listen((user) async {
-      _user = user;
-      if (user != null) {
-        _hasSubscription = await _authService.getSubscriptionStatus(user.uid);
-      } else {
-        _hasSubscription = false;
-      }
-      notifyListeners();
-    });
-  }
-
-  // Getters
+  List<Bar> get barRoute => _barRoute;
   int get currentBarIndex => _currentBarIndex;
   bool get isInProgress => _isInProgress;
+  bool get isRouteCompleted => _isRouteCompleted;
   int get remainingSeconds => _remainingSeconds;
-  Position? get currentPosition => _currentPosition;
   bool get isTimerActive => _isTimerActive;
-  List<Bar> get barRoute => _barRoute;
-  Bar? get currentBar => _currentBarIndex < _barRoute.length ? _barRoute[_currentBarIndex] : null;
-  bool get isRouteCompleted => _currentBarIndex >= _barRoute.length;
-  bool get isTestingMode => testingMode;
-  User? get user => _user;
-  bool get isSignedIn => _user != null;
-  bool get hasSubscription => _hasSubscription;
+  bool get isTestingMode => _isTestingMode;
+  Bar? get currentBar => _barRoute.isNotEmpty && _currentBarIndex < _barRoute.length ? _barRoute[_currentBarIndex] : null;
+  List<City> get cities => _cities;
+  Map<String, List<Round>> get roundsByCity => _roundsByCity;
+  City? get selectedCity => _selectedCity;
+  bool get isLoadingRounds => _isLoadingRounds;
 
-  // Methods
-  void setBarRoute(List<Bar> bars) {
-    _barRoute = bars;
-    _currentBarIndex = 0;
-    _isInProgress = false;
-    _isTimerActive = false;
-    _remainingSeconds = 0;
+  AppState() {
+    _authService.authStateChanges.listen(_onAuthStateChanged);
+  }
+
+  Future<void> _onAuthStateChanged(User? user) async {
+    _user = user;
+    if (user != null) {
+      _hasSubscription = await _authService.getSubscriptionStatus(user.uid);
+      _loadCities();
+    } else {
+      _hasSubscription = false;
+      _cities = [];
+      _roundsByCity = {};
+      _selectedCity = null;
+    }
+    notifyListeners();
+  }
+
+  Future<void> _loadCities() async {
+    try {
+      _cities = await _firebaseService.getCities();
+      if (_cities.isNotEmpty) {
+        _selectedCity = _cities.first;
+        await _loadRoundsForCity(_selectedCity!.id);
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading cities: $e');
+    }
+  }
+
+  Future<void> _loadRoundsForCity(String cityId) async {
+    _isLoadingRounds = true;
+    notifyListeners();
+    try {
+      final rounds = await _firebaseService.getRoundsByCity(cityId);
+      _roundsByCity[cityId] = rounds;
+    } catch (e) {
+      debugPrint('Error loading rounds for city $cityId: $e');
+      _roundsByCity[cityId] = []; // Ensure it's not null on error
+    } finally {
+      _isLoadingRounds = false;
+      notifyListeners();
+    }
+  }
+
+  void setSelectedCity(City city) {
+    _selectedCity = city;
+    if (!_roundsByCity.containsKey(city.id)) {
+      _loadRoundsForCity(city.id);
+    }
     notifyListeners();
   }
 
@@ -64,58 +112,85 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startBarVisit({int durationSeconds = 15 * 60}) {
+  void setBarRoute(List<Bar> bars) {
+    _barRoute = bars;
+    _currentBarIndex = 0;
+    _isInProgress = false;
+    _isRouteCompleted = false;
+    _remainingSeconds = 0;
+    _isTimerActive = false;
+    notifyListeners();
+  }
+
+  void startBarVisit({required int durationSeconds}) {
     _isInProgress = true;
     _remainingSeconds = durationSeconds;
     _isTimerActive = true;
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_remainingSeconds > 0) {
-        updateTimer(_remainingSeconds - 1);
-      } else {
-        timer.cancel();
-      }
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      updateTimer();
     });
     notifyListeners();
   }
 
-  void updateTimer(int seconds) {
-    _remainingSeconds = seconds;
-    if (seconds <= 0) {
-      completeBarVisit();
-    }
-    notifyListeners();
-  }
-
-  void completeBarVisit() {
-    _isInProgress = false;
-    _isTimerActive = false;
-    _timer?.cancel();
-    _currentBarIndex++;
-    notifyListeners();
-  }
-
-  void resetRoute() {
-    _currentBarIndex = 0;
-    _isInProgress = false;
-    _isTimerActive = false;
-    _remainingSeconds = 0;
-    _timer?.cancel();
-    notifyListeners();
-  }
-
-  Future<void> signInWithGoogle() async {
-    final user = await _authService.signInWithGoogle();
-    if (user != null) {
-      _hasSubscription = await _authService.getSubscriptionStatus(user.uid);
+  void updateTimer() {
+    if (_remainingSeconds > 0 && _isTimerActive) {
+      _remainingSeconds--;
+      if (_remainingSeconds == 0) {
+        _completeCurrentBar();
+        _timer?.cancel();
+      }
       notifyListeners();
     }
   }
 
-  Future<void> signOut() async {
-    await _authService.signOut();
-    _user = null;
-    _hasSubscription = false;
+  void _completeCurrentBar() {
+    _isInProgress = false;
+    _isTimerActive = false;
+    _timer?.cancel();
+    if (_currentBarIndex < _barRoute.length - 1) {
+      _currentBarIndex++;
+    } else {
+      _isRouteCompleted = true;
+    }
     notifyListeners();
   }
+
+  void resetRoute() {
+    _barRoute = [];
+    _currentBarIndex = 0;
+    _isInProgress = false;
+    _isRouteCompleted = false;
+    _remainingSeconds = 0;
+    _isTimerActive = false;
+    _timer?.cancel();
+    notifyListeners();
+  }
+
+  void toggleTestingMode() {
+    _isTestingMode = !_isTestingMode;
+    notifyListeners();
+  }
+
+  // Auth methods
+  Future<void> signInWithGoogle() async {
+    try {
+      await _authService.signInWithGoogle();
+      // Auth state will be updated by the stream listener
+    } catch (e) {
+      debugPrint('Error signing in with Google: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> signOut() async {
+    try {
+      await _authService.signOut();
+      // Auth state will be updated by the stream listener
+    } catch (e) {
+      debugPrint('Error signing out: $e');
+      rethrow;
+    }
+  }
 }
+

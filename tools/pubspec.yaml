@@ -1,0 +1,8 @@
+name: migration_tools
+description: A collection of scripts for database migration.
+version: 1.0.0
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  firebase_admin: ^0.2.0

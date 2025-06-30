@@ -130,7 +130,7 @@ class _TimerWidgetState extends State<TimerWidget> {
           ],
 
           // Photo Carousel (if photos are available)
-          if (widget.currentBar.imageUrl != null) ...[
+          if (widget.currentBar.imageUrls.isNotEmpty) ...[
             SizedBox(
               height: 200,
               child: Stack(
@@ -142,22 +142,22 @@ class _TimerWidgetState extends State<TimerWidget> {
                         _currentPhotoIndex = index;
                       });
                     },
-                    itemCount: 1, // Update this when you have multiple photos
+                    itemCount: widget.currentBar.imageUrls.length,
                     itemBuilder: (context, index) {
                       return Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           image: DecorationImage(
-                            image: NetworkImage(widget.currentBar.imageUrl!),
+                            image: NetworkImage(widget.currentBar.imageUrls[index]),
                             fit: BoxFit.cover,
                           ),
                         ),
                       );
                     },
                   ),
-                  // Add page indicators when you have multiple photos
-                  if (false) // Change this condition when you have multiple photos
+                  // Page indicators for multiple photos
+                  if (widget.currentBar.imageUrls.length > 1)
                     Positioned(
                       bottom: 8,
                       left: 0,
@@ -165,7 +165,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(
-                          1, // Update this when you have multiple photos
+                          widget.currentBar.imageUrls.length,
                           (index) => Container(
                             width: 8,
                             height: 8,
