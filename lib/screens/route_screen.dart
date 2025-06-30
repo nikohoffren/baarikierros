@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import '../models/round.dart';
 import 'package:another_flushbar/flushbar.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class RouteScreen extends StatefulWidget {
   const RouteScreen({super.key});
@@ -436,17 +437,55 @@ class _RouteScreenState extends State<RouteScreen> {
           // Back button
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
-            left: 16,
+            right: 16,
             child: Container(
               decoration: BoxDecoration(
                 color: AppTheme.secondaryBlack.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: IconButton(
-                onPressed: () => context.go('/'),
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: AppTheme.accentGold,
+              child: TextButton.icon(
+                onPressed: () async {
+                  final shouldQuit = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: AppTheme.secondaryBlack,
+                      title: const Text(
+                        'Lopeta kierros',
+                        style: TextStyle(color: AppTheme.accentGold),
+                      ),
+                      content: const Text(
+                        'Oletko varma että haluat lopettaa kierroksen?',
+                        style: TextStyle(color: AppTheme.white),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Peruuta', style: TextStyle(color: AppTheme.lightGrey)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Lopeta', style: TextStyle(color: AppTheme.accentGold)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (shouldQuit == true) {
+                    context.read<AppState>().resetRoute();
+                    if (context.mounted) context.go('/');
+                  }
+                },
+                icon: const Icon(Icons.close, color: AppTheme.accentGold),
+                label: const Text(
+                  'Lopeta kierros',
+                  style: TextStyle(color: AppTheme.accentGold, fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.accentGold,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  textStyle: const TextStyle(fontSize: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
