@@ -7,10 +7,8 @@ class FirebaseMigration {
   final FirebaseService _firebaseService = FirebaseService();
 
   Future<void> migrateData() async {
-    // Ensure Firebase is initialized
     await Firebase.initializeApp();
 
-    // Migrate cities
     final citiesCollection = await _firebaseService._firestore.collection('cities').get();
     if (citiesCollection.docs.isEmpty) {
       print('Migrating cities...');
@@ -24,14 +22,12 @@ class FirebaseMigration {
       print('Cities migrated successfully!');
     }
 
-    // Migrate bars and routes
     print('Migrating bars and routes...');
     for (var cityEntry in AppData.roundsByCity.entries) {
       final cityName = cityEntry.key;
       final rounds = cityEntry.value;
 
       for (var round in rounds) {
-        // First, add all bars from this round
         final barIds = <String>[];
         for (var bar in round.bars) {
           final barId = await _firebaseService.addBar(bar);
@@ -39,7 +35,6 @@ class FirebaseMigration {
           print('Added bar: ${bar.name}');
         }
 
-        // Then create the round with references to the bars
         final roundData = round.copyWith(
           bars: round.bars.asMap().entries.map((entry) {
             return entry.value.copyWith(
@@ -58,7 +53,6 @@ class FirebaseMigration {
   }
 }
 
-// Run migration
 void main() async {
   await Firebase.initializeApp();
   final migration = FirebaseMigration();

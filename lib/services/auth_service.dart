@@ -7,7 +7,6 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  // Sign in with Google
   Future<User?> signInWithGoogle() async {
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
     if (googleUser == null) return null;
@@ -21,13 +20,11 @@ class AuthService {
     return userCredential.user;
   }
 
-  // Sign out
   Future<void> signOut() async {
     await _auth.signOut();
     await _googleSignIn.signOut();
   }
 
-  // Create or update user in Firestore
   Future<void> _createOrUpdateUser(User? user) async {
     if (user == null) return;
     final userDoc = _firestore.collection('users').doc(user.uid);
@@ -50,13 +47,10 @@ class AuthService {
     }
   }
 
-  // Get current user
   User? get currentUser => _auth.currentUser;
 
-  // Listen to auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Get subscription status
   Future<bool> getSubscriptionStatus(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
     return doc.data()?['hasSubscription'] ?? false;

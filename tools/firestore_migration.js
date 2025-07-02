@@ -13,7 +13,6 @@ const db = admin.firestore();
 async function migrate() {
   const cityName = "Kuopio";
 
-  // 1. Find the city
   const citiesSnap = await db
     .collection("cities")
     .where("name", "==", cityName)
@@ -25,14 +24,12 @@ async function migrate() {
   const cityDoc = citiesSnap.docs[0];
   const cityId = cityDoc.id;
 
-  // 2. Get all bars from the top-level 'bars' collection
   const barsSnap = await db.collection("bars").get();
   if (barsSnap.empty) {
     console.error("No bars found in top-level bars collection.");
     process.exit(1);
   }
 
-  // 3. Move each bar to cities/{cityId}/bars and collect full bar objects
   const barObjects = [];
   for (const barDoc of barsSnap.docs) {
     const barData = barDoc.data();
@@ -46,7 +43,6 @@ async function migrate() {
     console.log(`Moved bar ${barDoc.id} to cities/${cityId}/bars`);
   }
 
-  // 4. Create a round under the city embedding all bar objects
   const roundData = {
     name: "Kuopion Klassikkokierros",
     description:

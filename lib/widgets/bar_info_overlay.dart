@@ -51,7 +51,6 @@ class BarInfoOverlay extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Bar icon and name
           Row(
             children: [
               Container(
@@ -96,7 +95,6 @@ class BarInfoOverlay extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Distance information
           if (distance != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -127,7 +125,6 @@ class BarInfoOverlay extends StatelessWidget {
             const SizedBox(height: 20),
           ],
 
-          // Enter bar button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(

@@ -33,7 +33,7 @@ class _BaarikierrosAppState extends State<BaarikierrosApp> {
   }
 
   Future<void> _initialize() async {
-    // Artificial delay for splash screen
+    //* Artificial delay for splash screen
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
       setState(() {

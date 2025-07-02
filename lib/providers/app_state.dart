@@ -12,18 +12,18 @@ class AppState extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
   final AuthService _authService = AuthService();
 
-  // Auth state
+  //* Auth state
   User? _user;
   bool _hasSubscription = false;
   bool get isSignedIn => _user != null;
   User? get user => _user;
   bool get hasSubscription => _hasSubscription;
 
-  // Location state
+  //* Location state
   Position? _currentPosition;
   Position? get currentPosition => _currentPosition;
 
-  // Route state
+  //* Route state
   List<Bar> _barRoute = [];
   int _currentBarIndex = 0;
   bool _isInProgress = false;
@@ -32,7 +32,7 @@ class AppState extends ChangeNotifier {
   bool _isTimerActive = false;
   bool _isTestingMode = true; //! Set false for production
 
-  // Cities and rounds state
+  //* Cities and rounds state
   List<City> _cities = [];
   Map<String, List<Round>> _roundsByCity = {};
   City? _selectedCity;
@@ -92,7 +92,7 @@ class AppState extends ChangeNotifier {
       _roundsByCity[cityId] = rounds;
     } catch (e) {
       debugPrint('Error loading rounds for city $cityId: $e');
-      _roundsByCity[cityId] = []; // Ensure it's not null on error
+      _roundsByCity[cityId] = [];
     } finally {
       _isLoadingRounds = false;
       notifyListeners();
@@ -172,11 +172,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Auth methods
+  //* Auth methods
   Future<void> signInWithGoogle() async {
     try {
       await _authService.signInWithGoogle();
-      // Auth state will be updated by the stream listener
     } catch (e) {
       debugPrint('Error signing in with Google: $e');
       rethrow;
@@ -186,11 +185,9 @@ class AppState extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       await _authService.signOut();
-      // Auth state will be updated by the stream listener
     } catch (e) {
       debugPrint('Error signing out: $e');
       rethrow;
     }
   }
 }
-

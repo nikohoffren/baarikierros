@@ -78,7 +78,7 @@ class _RouteScreenState extends State<RouteScreen> {
         ).listen((Position position) {
           if (mounted) {
             appState.setCurrentPosition(position);
-            // Do NOT update camera here!
+            //* Do NOT update camera here!
           }
         });
       }
@@ -202,7 +202,7 @@ class _RouteScreenState extends State<RouteScreen> {
         threshold: 50,
       );
       if (isNearby) {
-        appState.startBarVisit(durationSeconds: 60); // 60 seconds for testing
+        appState.startBarVisit(durationSeconds: 60); //! 60 seconds for testing
         Flushbar(
           messageText: const Center(
             child: Text(
@@ -232,13 +232,12 @@ class _RouteScreenState extends State<RouteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Only update markers when bar/progress changes
+    //* Only update markers when bar/progress changes
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateMarkers());
     final appState = Provider.of<AppState>(context, listen: false);
     return Scaffold(
       body: Stack(
         children: [
-          // GoogleMap OUTSIDE of Consumer!
           GoogleMap(
             onMapCreated: (GoogleMapController controller) {
               _mapController = controller;
@@ -258,7 +257,6 @@ class _RouteScreenState extends State<RouteScreen> {
             compassEnabled: true,
             onTap: (_) => FocusScope.of(context).unfocus(),
           ),
-          // Center on me button (moved below top bar)
           Positioned(
             top: MediaQuery.of(context).padding.top + 80,
             right: 16,
@@ -277,10 +275,9 @@ class _RouteScreenState extends State<RouteScreen> {
               },
             ),
           ),
-          // Overlays and timer use Consumer/Selector
           Consumer<AppState>(
             builder: (context, appState, child) {
-              // Show congratulation snackbar when timer ends, but not after the last bar
+              //* Show congratulation snackbar when timer ends, but not after the last bar
               if (!appState.isInProgress && appState.remainingSeconds == 0 && appState.currentBarIndex > 0 && !appState.isRouteCompleted) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   Flushbar(
@@ -293,7 +290,6 @@ class _RouteScreenState extends State<RouteScreen> {
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // Black stroke
                               Text(
                                 'Onnittelut, voit siirtyä kohti seuraavaa baaria!',
                                 textAlign: TextAlign.center,
@@ -306,7 +302,6 @@ class _RouteScreenState extends State<RouteScreen> {
                                     ..color = Colors.black,
                                 ),
                               ),
-                              // White fill
                               const Text(
                                 'Onnittelut, voit siirtyä kohti seuraavaa baaria!',
                                 textAlign: TextAlign.center,
@@ -322,12 +317,12 @@ class _RouteScreenState extends State<RouteScreen> {
                       ],
                     ),
                     backgroundGradient: const LinearGradient(
-                      colors: [Color(0xFFFFD700), Color(0xFFFFA500)], // Gold to orange
+                      colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    margin: const EdgeInsets.fromLTRB(32, 32, 32, 0), // Top margin
+                    margin: const EdgeInsets.fromLTRB(32, 32, 32, 0),
                     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                     duration: const Duration(seconds: 5),
                     flushbarPosition: FlushbarPosition.TOP,
@@ -342,7 +337,6 @@ class _RouteScreenState extends State<RouteScreen> {
               }
               return Column(
                 children: [
-                  // Top overlay with progress
                   Padding(
                     padding: EdgeInsets.only(
                       top: MediaQuery.of(context).padding.top + 16,
@@ -398,7 +392,6 @@ class _RouteScreenState extends State<RouteScreen> {
                       ),
                     ),
                   ),
-                  // Timer overlay (when active)
                   Selector<AppState, int>(
                     selector: (_, state) => state.remainingSeconds,
                     builder: (context, remainingSeconds, child) {
@@ -420,7 +413,6 @@ class _RouteScreenState extends State<RouteScreen> {
                       );
                     },
                   ),
-                  // Bar info overlay
                   if (!appState.isInProgress && appState.currentBar != null)
                     Expanded(
                       child: Align(
@@ -444,7 +436,6 @@ class _RouteScreenState extends State<RouteScreen> {
               );
             },
           ),
-          // Back button
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
             right: 16,

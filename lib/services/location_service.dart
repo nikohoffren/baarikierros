@@ -3,13 +3,11 @@ import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
   static Future<Position> getCurrentPosition() async {
-    // Check if location services are enabled
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       throw Exception('Location services are disabled.');
     }
 
-    // Check location permission
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -22,7 +20,6 @@ class LocationService {
       throw Exception('Location permissions are permanently denied');
     }
 
-    // Get current position
     return await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
@@ -33,7 +30,7 @@ class LocationService {
     double userLon,
     double barLat,
     double barLon, {
-    double threshold = 50, // meters
+    double threshold = 50, //* meters
   }) {
     double distance = Geolocator.distanceBetween(
       userLat,

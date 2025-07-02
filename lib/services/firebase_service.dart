@@ -9,7 +9,6 @@ class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Upload an image to Firebase Storage
   Future<String> uploadImage(String barId, File imageFile) async {
     final storageRef = _storage.ref().child('bars/$barId/images/${DateTime.now().millisecondsSinceEpoch}');
     final uploadTask = storageRef.putFile(imageFile);
@@ -17,13 +16,11 @@ class FirebaseService {
     return await snapshot.ref.getDownloadURL();
   }
 
-  // Fetch all cities
   Future<List<City>> getCities() async {
     final snapshot = await _firestore.collection('cities').get();
     return snapshot.docs.map((doc) => City.fromJson({...doc.data(), 'id': doc.id})).toList();
   }
 
-  // Fetch rounds for a specific city
   Future<List<Round>> getRoundsByCity(String cityId) async {
     final cityRoundsRef = _firestore.collection('cities').doc(cityId).collection('rounds');
     final snapshot = await cityRoundsRef.get();
@@ -37,7 +34,6 @@ class FirebaseService {
     return rounds;
   }
 
-  // Get all bars for a specific city
   Future<List<Bar>> getBarsByCity(String cityId) async {
     final snapshot = await _firestore
         .collection('cities')
@@ -50,7 +46,6 @@ class FirebaseService {
         .toList();
   }
 
-  // Get a specific bar by ID
   Future<Bar?> getBar(String cityId, String barId) async {
     final doc = await _firestore
         .collection('cities')

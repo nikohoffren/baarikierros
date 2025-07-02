@@ -65,7 +65,6 @@ class _TimerWidgetState extends State<TimerWidget> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Bar Progress Indicator
           Row(
             children: [
               Text(
@@ -90,7 +89,6 @@ class _TimerWidgetState extends State<TimerWidget> {
           ),
           const SizedBox(height: 20),
 
-          // Bar Name and Details
           Text(
             widget.currentBar.name,
             style: TextStyle(
@@ -101,7 +99,6 @@ class _TimerWidgetState extends State<TimerWidget> {
           ),
           const SizedBox(height: 8),
 
-          // Opening Hours
           Row(
             children: [
               Icon(Icons.access_time, size: 20, color: AppTheme.primaryBlack.withOpacity(0.7)),
@@ -117,7 +114,6 @@ class _TimerWidgetState extends State<TimerWidget> {
           ),
           const SizedBox(height: 8),
 
-          // Description
           if (widget.currentBar.description != null) ...[
             Text(
               widget.currentBar.description!,
@@ -129,7 +125,6 @@ class _TimerWidgetState extends State<TimerWidget> {
             const SizedBox(height: 16),
           ],
 
-          // Photo Carousel (if photos are available)
           if (widget.currentBar.imageUrls.isNotEmpty) ...[
             SizedBox(
               height: 200,
@@ -156,7 +151,6 @@ class _TimerWidgetState extends State<TimerWidget> {
                       );
                     },
                   ),
-                  // Page indicators for multiple photos
                   if (widget.currentBar.imageUrls.length > 1)
                     Positioned(
                       bottom: 8,
@@ -186,7 +180,6 @@ class _TimerWidgetState extends State<TimerWidget> {
             const SizedBox(height: 20),
           ],
 
-          // Timer Section
           Center(
             child: Column(
               children: [
@@ -219,7 +212,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                   SizedBox(
                     width: screenWidth * 0.7,
                     child: LinearProgressIndicator(
-                      value: widget.remainingSeconds / (15 * 60), // 15 minutes
+                      value: widget.remainingSeconds / (15 * 60), //* 15 minutes
                       backgroundColor: AppTheme.primaryBlack.withOpacity(0.2),
                       valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlack),
                       minHeight: 10,

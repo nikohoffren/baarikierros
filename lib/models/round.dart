@@ -73,7 +73,7 @@ class Round {
   @override
   int get hashCode => id.hashCode ^ name.hashCode;
 
-  // Create a Round from Firestore document
+  //* Create a Round from Firestore document
   factory Round.fromFirestore(String docId, Map<String, dynamic> data) {
     return Round(
       id: docId,
@@ -90,7 +90,7 @@ class Round {
     );
   }
 
-  // Convert Round to Firestore document
+  //* Convert Round to Firestore document
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
@@ -106,7 +106,7 @@ class Round {
     };
   }
 
-  // Create a copy of Round with updated fields
+  //* Create a copy of Round with updated fields
   Round copyWith({
     String? id,
     String? name,

@@ -11,7 +11,7 @@ import '../models/bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _TimeRange {
-  final int start; // minutes since midnight
+  final int start; //* minutes since midnight
   final int end;
   _TimeRange(this.start, this.end);
   String format() {
@@ -289,7 +289,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (appState.cities.isEmpty) {
-      // This can be a loading indicator or a "no cities found" message
       return const Center(
           child: CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentGold)));
@@ -486,11 +485,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (end > start) {
         result.add(_TimeRange(start, end));
       } else if (end < start) {
-        // Overnight: split into two ranges
-        result.add(_TimeRange(start, 1440)); // until midnight
-        result.add(_TimeRange(0, end)); // from midnight
+        //* Overnight: split into two ranges
+        result.add(_TimeRange(start, 1440)); //* until midnight
+        result.add(_TimeRange(0, end)); //* from midnight
       }
-      // If end == start, skip (zero-length period)
+      //* If end == start, skip (zero-length period)
     }
     return result;
   }
@@ -517,7 +516,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _weekdayToKey(int weekday) {
-    // 1=Mon, 7=Sun
+    //* 1=Mon, 7=Sun
     switch (weekday) {
       case DateTime.monday:
         return 'monday';
