@@ -9,6 +9,7 @@ import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'router/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +50,7 @@ class _BaarikierrosAppState extends State<BaarikierrosApp> {
       child: MaterialApp.router(
         title: 'Baarikierros',
         theme: AppTheme.darkTheme,
-        routerConfig: _router,
+        routerConfig: appRouter,
         debugShowCheckedModeBanner: false,
         builder: (context, router) {
           return _initialized ? router! : const SplashScreen();
@@ -58,17 +59,3 @@ class _BaarikierrosAppState extends State<BaarikierrosApp> {
     );
   }
 }
-
-final _router = GoRouter(
-  initialLocation: '/',
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomeScreen(),
-    ),
-    GoRoute(
-      path: '/route',
-      builder: (context, state) => const RouteScreen(),
-    ),
-  ],
-);
