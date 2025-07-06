@@ -5,14 +5,12 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../providers/app_state.dart';
 import '../services/location_service.dart';
-import '../services/timer_service.dart';
 import '../widgets/bar_info_overlay.dart';
 import '../widgets/timer_widget.dart';
 import '../theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import '../models/round.dart';
 import 'package:another_flushbar/flushbar.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class RouteScreen extends StatefulWidget {
   const RouteScreen({super.key});

@@ -4,7 +4,6 @@ import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:intl/intl.dart';
 import '../models/city.dart';
 import '../models/round.dart';
 import '../models/bar.dart';

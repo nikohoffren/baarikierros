@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'providers/app_state.dart';
-import 'screens/home_screen.dart';
-import 'screens/route_screen.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/services.dart';
 import 'router/app_router.dart';
 
 void main() async {
