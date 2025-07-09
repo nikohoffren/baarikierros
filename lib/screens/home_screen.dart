@@ -173,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Baarikierros on moderni sovellus, jonka avulla voit löytää ja kiertää kaupungin parhaita baareja valmiiden reittien avulla. Valitse kaupunki, valitse kierros ja seuraa reittiä helposti kartalta. Sovellus seuraa etenemistäsi ja auttaa sinua löytämään seuraavan pysähdyksen.',
+                  'Baarikierros on sovellus, jonka avulla voit löytää ja kiertää kaupungin parhaita baareja valmiiden reittien avulla. Valitse kaupunki, valitse kierros ja seuraa reittiä helposti kartalta. Sovellus seuraa etenemistäsi ja auttaa sinua löytämään seuraavan pysähdyksen.',
                   style: TextStyle(
                     fontSize: 16,
                     color: AppTheme.white,
@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Ole aina varovainen liikenteessä ja noudata liikennesääntöjä siirtyessäsi baarista toiseen. Jos nautit alkoholia, älä koskaan aja – suosi kävelyä. Baarikierros-reitit on suunniteltu niin, että baarit ovat kävelyetäisyydellä toisistaan.',
+                  'Ole aina varovainen liikenteessä ja noudata liikennesääntöjä siirtyessäsi baarista toiseen. Jos nautit alkoholia, älä koskaan aja,suosi kävelyä. Baarikierros-reitit on suunniteltu niin, että baarit ovat kävelyetäisyydellä toisistaan.',
                   style: TextStyle(
                     fontSize: 15,
                     color: AppTheme.lightGrey,
