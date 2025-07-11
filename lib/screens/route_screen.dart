@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../providers/app_state.dart';
+import '../providers/group_state.dart';
 import '../services/location_service.dart';
 import '../widgets/bar_info_overlay.dart';
 import '../widgets/timer_widget.dart';
@@ -12,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import '../models/round.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'dart:ui' as ui;
+import '../models/bar.dart';
 
 class RouteScreen extends StatefulWidget {
   const RouteScreen({super.key});
@@ -40,14 +42,25 @@ class _RouteScreenState extends State<RouteScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final groupState = Provider.of<GroupState>(context, listen: false);
+    final appState = Provider.of<AppState>(context, listen: false);
     if (!_didSetBarRoute) {
-      final round = GoRouter.of(context).routerDelegate.currentConfiguration?.extra;
-      if (round is Round) {
+      if (groupState.isGroupMode && groupState.groupData != null) {
+        final barsData = groupState.groupData!.bars;
+        final bars = barsData.map<Bar>((b) => Bar.fromJson(Map<String, dynamic>.from(b))).toList();
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<AppState>().setBarRoute(round.bars);
+          appState.setBarRoute(bars);
         });
+        _didSetBarRoute = true;
+      } else {
+        final round = GoRouter.of(context).routerDelegate.currentConfiguration?.extra;
+        if (round is Round) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            appState.setBarRoute(round.bars);
+          });
+          _didSetBarRoute = true;
+        }
       }
-      _didSetBarRoute = true;
     }
   }
 
@@ -146,8 +159,33 @@ class _RouteScreenState extends State<RouteScreen> {
     return descriptor;
   }
 
+  Future<BitmapDescriptor> _getGroupMemberMarkerIcon(String name, bool isSelf) async {
+    const double size = 90;
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
+    final Paint paint = Paint()
+      ..color = isSelf ? Colors.blueAccent : Colors.grey[700]!
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(size / 2, size / 2), 32, paint);
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: name.isNotEmpty ? name[0] : '?',
+        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset((size - textPainter.width) / 2, (size - textPainter.height) / 2));
+    final img = await recorder.endRecording().toImage(size.toInt(), size.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    final bytes = data!.buffer.asUint8List();
+    return BitmapDescriptor.fromBytes(bytes);
+  }
+
   void _updateMarkers() async {
     final appState = context.read<AppState>();
+    final groupState = Provider.of<GroupState>(context, listen: false);
     final barRoute = appState.barRoute;
     final currentBarIndex = appState.currentBarIndex;
     if (_lastBarIndex == currentBarIndex && _markers.isNotEmpty) return;
@@ -166,6 +204,29 @@ class _RouteScreenState extends State<RouteScreen> {
         ),
       );
     }
+
+    if (groupState.isGroupMode && groupState.groupData != null) {
+      for (final member in groupState.groupMembers) {
+        final name = member['displayName'] as String? ?? '';
+        final lat = member['lat'] as double?;
+        final lon = member['lon'] as double?;
+        final isSelf = member['uid'] == groupState.myUid;
+        if (lat != null && lon != null) {
+          final markerId = MarkerId('member_${name}_$lat$lon');
+          final icon = await _getGroupMemberMarkerIcon(name, isSelf);
+          markers.add(
+            Marker(
+              markerId: markerId,
+              position: LatLng(lat, lon),
+              icon: icon,
+              infoWindow: InfoWindow(title: name, snippet: isSelf ? 'Sinä' : null),
+              zIndex: isSelf ? 2 : 1,
+            ),
+          );
+        }
+      }
+    }
+
     setState(() {
       _markers = markers;
       _lastBarIndex = currentBarIndex;
@@ -208,6 +269,7 @@ class _RouteScreenState extends State<RouteScreen> {
 
   Future<void> _handleEnterBar() async {
     final appState = context.read<AppState>();
+    final groupState = Provider.of<GroupState>(context, listen: false);
     final currentBar = appState.currentBar;
     final currentPosition = appState.currentPosition;
     if (currentBar == null || currentPosition == null) {
@@ -218,7 +280,31 @@ class _RouteScreenState extends State<RouteScreen> {
       bool isNearby =
           appState.isTestingMode ||
           LocationService.checkProximity(currentPosition.latitude, currentPosition.longitude, currentBar.lat, currentBar.lon, threshold: 50);
-      if (isNearby) {
+      if (!isNearby) {
+        _showErrorDialog('📍 Et ole tarpeeksi lähellä baaria');
+        return;
+      }
+      if (groupState.isGroupMode) {
+        await groupState.checkInToBar(appState.currentBarIndex);
+        Flushbar(
+          messageText: const Center(
+            child: Text(
+              'Kirjauduttu baariin, odotetaan muita...',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          backgroundColor: AppTheme.secondaryBlack,
+          borderRadius: BorderRadius.circular(16),
+          margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          duration: const Duration(seconds: 5),
+          flushbarPosition: FlushbarPosition.BOTTOM,
+          animationDuration: const Duration(milliseconds: 700),
+          forwardAnimationCurve: Curves.elasticOut,
+          reverseAnimationCurve: Curves.easeIn,
+        ).show(context);
+      } else {
         appState.startBarVisit(durationSeconds: 60); //! 60 seconds for testing
         Flushbar(
           messageText: const Center(
@@ -239,8 +325,6 @@ class _RouteScreenState extends State<RouteScreen> {
           reverseAnimationCurve: Curves.easeIn,
         ).show(context);
         _updateMarkers();
-      } else {
-        _showErrorDialog('📍 Et ole tarpeeksi lähellä baaria');
       }
     } catch (e) {
       _showErrorDialog('Virhe: $e');
@@ -252,6 +336,29 @@ class _RouteScreenState extends State<RouteScreen> {
     //* Only update markers when bar/progress changes
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateMarkers());
     final appState = Provider.of<AppState>(context, listen: false);
+    final groupState = Provider.of<GroupState>(context);
+
+    // --- DEBUG: Print group state at build ---
+    debugPrint('RouteScreen build: isGroupMode=${groupState.isGroupMode}');
+    debugPrint('RouteScreen build: groupData=${groupState.groupData}');
+    if (groupState.groupData != null) {
+      debugPrint('RouteScreen build: groupData.bars=${groupState.groupData!.bars}');
+    }
+    // --- END DEBUG ---
+
+    if (groupState.isGroupMode && groupState.groupData != null && !_didSetBarRoute) {
+      final barsData = groupState.groupData!.bars;
+      debugPrint('Group mode: groupData.bars = $barsData');
+      if (barsData.isNotEmpty) {
+        final bars = barsData.map<Bar>((b) => Bar.fromJson(Map<String, dynamic>.from(b))).toList();
+        appState.setBarRoute(bars);
+        _didSetBarRoute = true;
+        debugPrint('Group mode: setBarRoute called with ${bars.length} bars');
+      } else {
+        debugPrint('Group mode: barsData is empty, not calling setBarRoute');
+      }
+    }
+
     return Scaffold(
       body: Stack(
         children: [
@@ -272,135 +379,56 @@ class _RouteScreenState extends State<RouteScreen> {
             onTap: (_) => FocusScope.of(context).unfocus(),
           ),
           Positioned(
-            top: MediaQuery.of(context).padding.top + 80,
+            left: 16,
             right: 16,
-            child: FloatingActionButton(
-              backgroundColor: AppTheme.accentGold,
-              child: const Icon(Icons.my_location, color: AppTheme.primaryBlack),
-              onPressed: () {
-                final pos = appState.currentPosition;
-                if (pos != null && _mapController != null) {
-                  _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(pos.latitude, pos.longitude)));
-                }
-              },
-            ),
+            top: MediaQuery.of(context).padding.top + 16,
+            child: Consumer<AppState>(builder: (context, appState, _) => _buildTopBar(appState, groupState)),
           ),
           Consumer<AppState>(
             builder: (context, appState, child) {
-              //* Show congratulation snackbar when timer ends, but not after the last bar
-              if (!appState.isInProgress && appState.remainingSeconds == 0 && appState.currentBarIndex > 0 && !appState.isRouteCompleted) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  Flushbar(
-                    messageText: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.celebration, color: Colors.white, size: 28),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Text(
-                                'Onnittelut, voit siirtyä kohti seuraavaa baaria!',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  foreground: Paint()
-                                    ..style = PaintingStyle.stroke
-                                    ..strokeWidth = 3
-                                    ..color = Colors.black,
-                                ),
-                              ),
-                              const Text(
-                                'Onnittelut, voit siirtyä kohti seuraavaa baaria!',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    backgroundGradient: const LinearGradient(
-                      colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    margin: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                    duration: const Duration(seconds: 5),
-                    flushbarPosition: FlushbarPosition.TOP,
-                    animationDuration: const Duration(milliseconds: 700),
-                    forwardAnimationCurve: Curves.elasticOut,
-                    reverseAnimationCurve: Curves.easeIn,
-                  ).show(context);
-                });
+              final groupState = Provider.of<GroupState>(context);
+              final isGroupMode = groupState.isGroupMode;
+              final barTimer = groupState.currentBarTimer;
+              final checkedInUids = groupState.checkedInUids;
+              final myUid = groupState.myUid;
+              final hasCheckedIn = isGroupMode && myUid != null && checkedInUids.contains(myUid);
+              final timerShouldStart = isGroupMode ? barTimer != null : appState.isTimerActive;
+              final remainingSeconds = appState.remainingSeconds;
+              final currentBar = appState.currentBar;
+              final currentPosition = appState.currentPosition;
+
+              if (currentBar != null && currentPosition != null && !timerShouldStart) {
+                final isNearby =
+                    appState.isTestingMode ||
+                    LocationService.checkProximity(currentPosition.latitude, currentPosition.longitude, currentBar.lat, currentBar.lon, threshold: 50);
+                if (isNearby) {
+                  if (isGroupMode && !hasCheckedIn) {
+                    groupState.checkInToBar(appState.currentBarIndex);
+                  } else if (!isGroupMode && !appState.isTimerActive) {
+                    appState.startBarVisit(durationSeconds: 60); //! or use a configured duration
+                  }
+                }
+              }
+              if (isGroupMode && barTimer != null && !appState.isTimerActive) {
+                appState.startBarVisit(durationSeconds: 60); //! or use a group-configured duration
               }
               if (appState.isRouteCompleted) {
                 return _buildCompletionScreen();
               }
               return Column(
                 children: [
-                  Padding(
-                    padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, left: 16, right: 16),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.secondaryBlack.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.accentGold.withOpacity(0.3), width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.local_bar, color: AppTheme.accentGold, size: 24),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Baari ${appState.currentBarIndex + 1}/${appState.barRoute.length}',
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.white),
-                                ),
-                                if (appState.barRoute.isNotEmpty)
-                                  LinearProgressIndicator(
-                                    value: (appState.currentBarIndex + 1) / appState.barRoute.length,
-                                    backgroundColor: AppTheme.grey.withOpacity(0.3),
-                                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentGold),
-                                  )
-                                else
-                                  LinearProgressIndicator(
-                                    value: 0.0,
-                                    backgroundColor: AppTheme.grey.withOpacity(0.3),
-                                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentGold),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
+                  if (timerShouldStart)
+                    Padding(
+                      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 100, left: 16, right: 16),
+                      child: TimerWidget(
+                        remainingSeconds: remainingSeconds,
+                        isActive: appState.isTimerActive,
+                        currentBar: appState.currentBar!,
+                        currentBarIndex: appState.currentBarIndex,
+                        totalBars: appState.barRoute.length,
                       ),
                     ),
-                  ),
-                  Selector<AppState, int>(
-                    selector: (_, state) => state.remainingSeconds,
-                    builder: (context, remainingSeconds, child) {
-                      final isActive = context.select((AppState s) => s.isTimerActive);
-                      if (!isActive) return const SizedBox.shrink();
-                      return Padding(
-                        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 100, left: 16, right: 16),
-                        child: TimerWidget(
-                          remainingSeconds: remainingSeconds,
-                          isActive: isActive,
-                          currentBar: context.read<AppState>().currentBar!,
-                          currentBarIndex: context.read<AppState>().currentBarIndex,
-                          totalBars: context.read<AppState>().barRoute.length,
-                        ),
-                      );
-                    },
-                  ),
-                  if (!appState.isInProgress && appState.currentBar != null)
+                  if (appState.currentBar != null)
                     Expanded(
                       child: Align(
                         alignment: Alignment.bottomCenter,
@@ -409,8 +437,8 @@ class _RouteScreenState extends State<RouteScreen> {
                           child: BarInfoOverlay(
                             bar: appState.currentBar!,
                             currentPosition: appState.currentPosition,
-                            onEnterBar: _handleEnterBar,
-                            isInProgress: appState.isInProgress,
+                            isInProgress: timerShouldStart,
+                            showWaiting: isGroupMode && hasCheckedIn && !timerShouldStart,
                           ),
                         ),
                       ),
@@ -419,51 +447,136 @@ class _RouteScreenState extends State<RouteScreen> {
               );
             },
           ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            right: 16,
-            child: Container(
-              decoration: BoxDecoration(color: AppTheme.secondaryBlack.withOpacity(0.9), borderRadius: BorderRadius.circular(12)),
-              child: TextButton.icon(
-                onPressed: () async {
-                  final shouldQuit = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      backgroundColor: AppTheme.secondaryBlack,
-                      title: const Text('Lopeta kierros', style: TextStyle(color: AppTheme.accentGold)),
-                      content: const Text('Oletko varma että haluat lopettaa kierroksen?', style: TextStyle(color: AppTheme.white)),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Peruuta', style: TextStyle(color: AppTheme.lightGrey)),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Lopeta', style: TextStyle(color: AppTheme.accentGold)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (shouldQuit == true) {
-                    context.read<AppState>().resetRoute();
-                    if (context.mounted) context.go('/');
-                  }
-                },
-                icon: const Icon(Icons.close, color: AppTheme.accentGold),
-                label: const Text(
-                  'Lopeta kierros',
-                  style: TextStyle(color: AppTheme.accentGold, fontWeight: FontWeight.bold),
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.accentGold,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  textStyle: const TextStyle(fontSize: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar(AppState appState, GroupState groupState) {
+    final currentBarIndex = appState.currentBarIndex;
+    final totalBars = appState.barRoute.length;
+    final barLabel = 'Baari ${currentBarIndex + 1}/$totalBars';
+    return Card(
+      color: AppTheme.secondaryBlack.withOpacity(0.98),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      elevation: 10,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Icon(Icons.local_bar, color: AppTheme.accentGold, size: 28),
+                const SizedBox(width: 10),
+                Text(
+                  barLabel,
+                  style: const TextStyle(color: AppTheme.accentGold, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: () async {
+                    final shouldQuit = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: AppTheme.secondaryBlack,
+                        title: const Text('Lopeta kierros', style: TextStyle(color: AppTheme.accentGold)),
+                        content: const Text('Oletko varma että haluat lopettaa kierroksen?', style: TextStyle(color: AppTheme.white)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Peruuta', style: TextStyle(color: AppTheme.lightGrey)),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Lopeta', style: TextStyle(color: AppTheme.accentGold)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (shouldQuit == true) {
+                      if (groupState.isGroupMode) {
+                        await groupState.leaveGroup();
+                      } else {
+                        context.read<AppState>().resetRoute();
+                      }
+                      if (context.mounted) context.go('/');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentGold,
+                    foregroundColor: AppTheme.primaryBlack,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    elevation: 0,
+                  ),
+                  child: const Text('Lopeta kierros'),
+                ),
+              ],
+            ),
+            if (groupState.isGroupMode && groupState.groupData != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 56,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: groupState.groupMembers.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, idx) {
+                          final member = groupState.groupMembers[idx];
+                          final name = member['displayName'] as String? ?? '';
+                          final isSelf = member['uid'] == groupState.myUid;
+                          final progress = member['currentBarIndex'] as int? ?? 0;
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircleAvatar(
+                                radius: isSelf ? 12 : 10,
+                                backgroundColor: isSelf ? Colors.blueAccent : AppTheme.accentGold,
+                                child: Text(
+                                  name.isNotEmpty ? name[0] : '?',
+                                  style: TextStyle(color: isSelf ? Colors.white : AppTheme.primaryBlack, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ),
+                              const SizedBox(height: 0),
+                              Text(
+                                name,
+                                style: TextStyle(
+                                  color: isSelf ? Colors.blueAccent : AppTheme.accentGold,
+                                  fontWeight: isSelf ? FontWeight.bold : FontWeight.normal,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              Text('B${progress + 1}', style: const TextStyle(color: AppTheme.lightGrey, fontSize: 8)),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton(
+                    icon: const Icon(Icons.my_location, color: AppTheme.accentGold),
+                    tooltip: 'Keskitä sijainti',
+                    onPressed: () {
+                      final pos = appState.currentPosition;
+                      if (pos != null && _mapController != null) {
+                        _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(pos.latitude, pos.longitude)));
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -505,8 +618,14 @@ class _RouteScreenState extends State<RouteScreen> {
                   width: double.infinity,
                   height: 60,
                   child: ElevatedButton(
-                    onPressed: () {
-                      context.read<AppState>().resetRoute();
+                    onPressed: () async {
+                      final groupState = context.read<GroupState>();
+                      final appState = context.read<AppState>();
+                      if (groupState.isGroupMode) {
+                        await groupState.leaveGroup();
+                      }
+                      appState.resetRoute();
+                      if (context.mounted) context.go('/');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentGold,

@@ -9,6 +9,9 @@ class BarInfoOverlay extends StatelessWidget {
   final Position? currentPosition;
   final VoidCallback? onEnterBar;
   final bool isInProgress;
+  final bool hasCheckedIn;
+  final bool isGroupMode;
+  final bool showWaiting;
 
   const BarInfoOverlay({
     super.key,
@@ -16,18 +19,16 @@ class BarInfoOverlay extends StatelessWidget {
     this.currentPosition,
     this.onEnterBar,
     this.isInProgress = false,
+    this.hasCheckedIn = false,
+    this.isGroupMode = false,
+    this.showWaiting = false,
   });
 
   @override
   Widget build(BuildContext context) {
     double? distance;
     if (currentPosition != null) {
-      distance = LocationService.calculateDistance(
-        currentPosition!.latitude,
-        currentPosition!.longitude,
-        bar.lat,
-        bar.lon,
-      );
+      distance = LocationService.calculateDistance(currentPosition!.latitude, currentPosition!.longitude, bar.lat, bar.lon);
     }
 
     return Container(
@@ -36,17 +37,8 @@ class BarInfoOverlay extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.secondaryBlack.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.accentGold.withOpacity(0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
-        ],
+        border: Border.all(color: AppTheme.accentGold.withOpacity(0.3), width: 2),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, spreadRadius: 5)],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -55,15 +47,8 @@ class BarInfoOverlay extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.purpleGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.local_bar,
-                  color: AppTheme.white,
-                  size: 24,
-                ),
+                decoration: BoxDecoration(gradient: AppTheme.purpleGradient, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.local_bar, color: AppTheme.white, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -72,21 +57,11 @@ class BarInfoOverlay extends StatelessWidget {
                   children: [
                     Text(
                       bar.name,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.accentGold,
-                      ),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.accentGold),
                     ),
                     if (bar.description != null) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        bar.description!,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.lightGrey,
-                        ),
-                      ),
+                      Text(bar.description!, style: const TextStyle(fontSize: 14, color: AppTheme.lightGrey)),
                     ],
                   ],
                 ),
@@ -98,26 +73,15 @@ class BarInfoOverlay extends StatelessWidget {
           if (distance != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlack.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: AppTheme.primaryBlack.withOpacity(0.5), borderRadius: BorderRadius.circular(12)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.location_on,
-                    color: AppTheme.accentGold,
-                    size: 20,
-                  ),
+                  const Icon(Icons.location_on, color: AppTheme.accentGold, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     '${distance.toStringAsFixed(0)}m päässä',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.white,
-                    ),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.white),
                   ),
                 ],
               ),
@@ -125,41 +89,19 @@ class BarInfoOverlay extends StatelessWidget {
             const SizedBox(height: 20),
           ],
 
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: isInProgress ? null : onEnterBar,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isInProgress
-                    ? AppTheme.grey
-                    : AppTheme.accentGold,
-                foregroundColor: isInProgress
-                    ? AppTheme.lightGrey
-                    : AppTheme.primaryBlack,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+          if (showWaiting) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isInProgress ? Icons.hourglass_empty : Icons.login,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isInProgress ? 'Käynnissä...' : 'Kirjaudu baariin',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                children: const [
+                  Icon(Icons.hourglass_empty, size: 20),
+                  SizedBox(width: 8),
+                  Text('Odotetaan muita...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
