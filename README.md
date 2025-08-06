@@ -127,64 +127,6 @@ The app uses a modern dark theme with:
 4. **Progress**: Visual indicators show route completion
 5. **Completion**: Celebration screen when all bars are visited
 
-## Customization
-
-### Adding More Bars
-
-Edit the `_barRoute` list in `lib/providers/app_state.dart`:
-
-```dart
-const Bar(
-  name: 'New Bar Name',
-  lat: 62.8926,  // Replace with actual coordinates
-  lon: 27.6785,
-  description: 'Bar description',
-),
-```
-
-### Changing Timer Duration
-
-Modify the timer duration in `lib/providers/app_state.dart`:
-
-```dart
-void startBarVisit() {
-  _isInProgress = true;
-  _remainingSeconds = 20 * 60; // Change to 20 minutes
-  _isTimerActive = true;
-  notifyListeners();
-}
-```
-
-### Adjusting Proximity Threshold
-
-Change the proximity threshold in `lib/screens/route_screen.dart`:
-
-```dart
-bool isNearby = LocationService.checkProximity(
-  currentPosition.latitude,
-  currentPosition.longitude,
-  currentBar.lat,
-  currentBar.lon,
-  threshold: 100, // Change to 100 meters
-);
-```
-
-## Troubleshooting
-
-### Location Permissions
-
-If location doesn't work:
-
-1. Check that location permissions are granted
-2. Ensure location services are enabled on device
-3. Verify API key has correct permissions
-
-### Google Maps Not Loading
-
-1. Verify API key is correctly set in AndroidManifest.xml
-2. Check that Maps SDK is enabled in Google Cloud Console
-3. Ensure internet connection is available
-
 ### Build Issues
 
 ```bash
